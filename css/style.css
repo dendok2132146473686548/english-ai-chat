@@ -99,3 +99,11 @@ h3{font-size:17px;margin:14px 0 8px}
 #bottom-nav{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;width:min(640px,calc(100% - 16px));background:var(--card);border:1px solid var(--line);border-radius:999px;display:flex;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.08)}
 .nav-btn{flex:1;border:none;background:transparent;border-radius:999px;padding:12px;font-size:15px;font-weight:700;color:var(--muted);cursor:pointer}
 .nav-btn.active{background:var(--text);color:#fff}
+/* AI settings */
+.ai-card{margin-top:14px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.ai-row{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;cursor:pointer}
+.ai-row input{width:20px;height:20px}
+.ai-input{width:100%;box-sizing:border-box;margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:12px;font-size:16px;background:var(--bg,#fff)}
+.ai-row2{display:flex;gap:8px;margin-top:8px}
+.ai-row2 select{flex:1;padding:12px;border:1px solid var(--line);border-radius:12px;font-size:15px;background:var(--card)}
+#ai-status{min-height:18px}

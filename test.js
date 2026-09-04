@@ -7,7 +7,8 @@ eval(
   fs.readFileSync(base + 'store.js', 'utf8') + '\n' +
   fs.readFileSync(base + 'conversation.js', 'utf8') + '\n' +
   fs.readFileSync(base + 'evaluator.js', 'utf8') + '\n' +
-  'global.__X={pickSituation:pickSituation,nextAiMessage:nextAiMessage,evaluateAnswer:evaluateAnswer,extractFacts:extractFacts,extractNewWords:extractNewWords,LEVELS:LEVELS,SITUATIONS:SITUATIONS,getDb:function(){return db;},setUsed:function(v){db.usedTopics=v;}};'
+  fs.readFileSync(base + 'ai.js', 'utf8') + '\n' +
+  'global.__X={pickSituation:pickSituation,nextAiMessage:nextAiMessage,evaluateAnswer:evaluateAnswer,extractFacts:extractFacts,extractNewWords:extractNewWords,LEVELS:LEVELS,SITUATIONS:SITUATIONS,getDb:function(){return db;},setUsed:function(v){db.usedTopics=v;},buildCheckerPrompt:buildCheckerPrompt,parseCheckResult:parseCheckResult,buildDialoguePrompt:buildDialoguePrompt,cleanReply:cleanReply,clampScore:clampScore,aiReady:aiReady,stripCodeFences:stripCodeFences};'
 );
 const X = global.__X;
 const db = X.getDb();
@@ -143,6 +144,52 @@ const rC = X.evaluateAnswer('How much it cost?', 'Shopping questions.', 'airport
 ok(rC.better && /how much does it cost/i.test(rC.better), 'how-much better', rC.better);
 const rD = X.evaluateAnswer('He go to school every day.', 'Tell me about him.', 'airport');
 ok(rD.better && /He goes to school/.test(rD.better), 'third-person better keeps case', rD.better);
+
+// 17. AI-модуль: промпты содержат вопрос, ответ и уровень
+const sitT = { id: 'airport', titleRu: 'Аэропорт', opener: 'You are at the airport. What do you say?', followups: [], events: [] };
+const cp = X.buildCheckerPrompt('I have went to London.', 'What did you do?', sitT, 'A1');
+ok(cp.includes('I have went to London.') && cp.includes('What did you do?') && cp.includes('A1') && cp.includes('JSON'), 'checker prompt built', cp.slice(0, 80));
+const dp = X.buildDialoguePrompt('I am fine.', [{ role: 'ai', text: 'Hello!' }, { role: 'user', text: 'Hi!' }, { role: 'correction', text: '<b>x</b>' }], sitT, 'B1');
+ok(dp.system.includes('Аэропорт') && dp.contents.length === 3 && dp.contents.every(c => c.role === 'user' || c.role === 'model'), 'dialogue prompt built', JSON.stringify(dp.contents.map(c => c.role)));
+
+// 18. AI-модуль: разбор JSON проверки
+const parsed = X.parseCheckResult(JSON.stringify({
+  unclear: false,
+  corrections: [{ original: 'have went', correction: 'went', type: 'grammar', explanation: 'Прошедшее время.' }],
+  better: 'I went to London.', natural: null, grammar: 80, vocabulary: 90, naturalness: 85, context: 95,
+}), 'I have went to London.');
+ok(parsed.corrections.length === 1 && parsed.fragments[0].from === 'have went' && parsed.better === 'I went to London.' && parsed.grammar === 80 && parsed.source === 'ai', 'check result mapped', JSON.stringify(parsed.corrections));
+const parsedOk = X.parseCheckResult('{"unclear": false, "corrections": [], "better": null, "natural": {"sentence": "Could I have a room?"}, "grammar": 100, "vocabulary": 100, "naturalness": 90, "context": 100}', 'Can I have a room?');
+ok(parsedOk.corrections.length === 0 && parsedOk.natural && parsedOk.natural.sentence.includes('Could I have'), 'correct + natural mapped', JSON.stringify(parsedOk.natural));
+const parsedUnclear = X.parseCheckResult('{"unclear": true}', 'bjnkj');
+ok(parsedUnclear.unclear === true && parsedUnclear.corrections.length === 0, 'unclear mapped', JSON.stringify(parsedUnclear));
+let threw = false;
+try { X.parseCheckResult('not json at all {{{', 'hello'); } catch (e) { threw = true; }
+ok(threw, 'bad json throws (fallback to local engine)');
+
+// 19. AI-модуль: выдуманные исправления отбрасываются
+const parsedFake = X.parseCheckResult(JSON.stringify({
+  unclear: false,
+  corrections: [
+    { original: 'have went', correction: 'went', type: 'grammar', explanation: 'ок' },
+    { original: 'yesterday tomorrow', correction: 'today', type: 'grammar', explanation: 'выдумка' },
+    { original: '', correction: 'x', type: 'grammar', explanation: 'пусто' },
+  ],
+  better: null, natural: null, grammar: 50, vocabulary: 50, naturalness: 50, context: 50,
+}), 'I have went home.');
+ok(parsedFake.corrections.length === 1 && parsedFake.corrections[0].original === 'have went', 'invented corrections dropped', JSON.stringify(parsedFake.corrections));
+
+// 20. AI-модуль: утилиты
+ok(X.clampScore(150, 70) === 100 && X.clampScore(-5, 70) === 0 && X.clampScore('bad', 70) === 70, 'clampScore', '');
+ok(X.cleanReply('"Hello, how are you?"').includes('Hello'), 'cleanReply strips quotes', X.cleanReply('"Hi!"'));
+ok(X.stripCodeFences('```json\n{"a":1}\n```') === '{"a":1}', 'stripCodeFences', X.stripCodeFences('```json\n{"a":1}\n```'));
+db.ai = { enabled: false, key: '', model: 'gemini-2.0-flash' };
+ok(X.aiReady() === false, 'aiReady false without key');
+db.ai = { enabled: true, key: 'test-key', model: 'gemini-2.0-flash' };
+ok(X.aiReady() === true, 'aiReady true with key');
+db.ai = { enabled: true, key: '', model: 'gemini-2.0-flash' };
+ok(X.aiReady() === false, 'aiReady false with empty key');
+db.ai = { enabled: false, key: '', model: 'gemini-2.0-flash' };
 
 console.log(fails === 0 ? 'ALL TESTS PASSED' : fails + ' FAILED');
 process.exit(fails ? 1 : 0);

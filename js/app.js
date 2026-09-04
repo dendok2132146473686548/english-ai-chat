@@ -64,6 +64,36 @@ function initHome() {
   document.getElementById('home-avg').textContent = scores.length ? `Средний балл: ${avg}/100` : 'Начните первый разговор';
   const hasLast = db.lastConversationId && db.conversations.some(c => c.id === db.lastConversationId && !c.finished);
   document.getElementById('btn-continue').style.display = hasLast ? '' : 'none';
+  initAISettings();
+}
+
+// ---------- AI SETTINGS ----------
+function initAISettings() {
+  if (typeof aiSettings !== 'function') return;
+  const s = aiSettings();
+  const en = document.getElementById('ai-enabled');
+  const box = document.getElementById('ai-settings');
+  const key = document.getElementById('ai-key');
+  const model = document.getElementById('ai-model');
+  const status = document.getElementById('ai-status');
+  if (!en || !box || !key || !model) return;
+  if (!model.options.length) {
+    model.innerHTML = AI_MODELS.map(m => `<option value="${m}">${m}</option>`).join('');
+  }
+  en.checked = !!s.enabled;
+  key.value = s.key || '';
+  model.value = s.model || AI_DEFAULT_MODEL;
+  box.classList.toggle('hidden', !en.checked);
+  en.onchange = () => { s.enabled = en.checked; saveDb(); box.classList.toggle('hidden', !en.checked); };
+  key.onchange = () => { s.key = key.value.trim(); saveDb(); status.textContent = ''; };
+  model.onchange = () => { s.model = model.value; saveDb(); };
+  document.getElementById('ai-test').onclick = async () => {
+    s.key = key.value.trim(); s.model = model.value; saveDb();
+    if (!s.key) { status.textContent = 'Вставьте ключ.'; return; }
+    status.textContent = 'Проверяю…';
+    try { await aiPing(); status.textContent = '✅ Ключ работает!'; }
+    catch (e) { status.textContent = '❌ Не вышло: ' + (e.message || e); }
+  };
 }
 
 // ---------- CHAT ----------
@@ -135,44 +165,77 @@ function handleSend() {
 }
 
 let checking = false;
-function handleUserText(text) {
+function resetBusy(msg) {
+  checking = false;
+  const btn = document.getElementById('btn-send');
+  btn.disabled = false; btn.textContent = '➤';
+  setStatus(msg || '');
+}
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function handleUserText(text) {
   if (!convo || checking) return;
   checking = true;
-  setStatus('Проверяю…');
   const btn = document.getElementById('btn-send');
   btn.disabled = true; btn.textContent = '…';
   addBubble('user', text);
   convo.turns.push({ role: 'user', text });
 
-  setTimeout(() => {
-    try {
-      const lastAi = [...convo.turns].reverse().find(t => t.role === 'ai');
-      const ev = evaluateAnswer(text, lastAi ? lastAi.text : '', convo.situation ? convo.situation.id : '');
-      convo.evals.push(ev);
-      saveTurnError(ev, text);
-      showCorrection(text, ev);
-      const reply = nextAiMessage(text, convo);
-      convo.step++;
-      setTimeout(() => {
-        aiSay(reply);
-        checking = false;
-        btn.disabled = false; btn.textContent = '➤';
-        setStatus('');
-      }, 900);
-    } catch (e) {
-      checking = false;
-      btn.disabled = false; btn.textContent = '➤';
-      addBubble('ai', 'Something went wrong. Please try again. / Что-то пошло не так. Попробуйте ещё раз.');
-      setStatus('');
+  const lastAi = [...convo.turns].reverse().find(t => t.role === 'ai');
+  const lastAiText = lastAi ? lastAi.text : '';
+  const sitId = convo.situation ? convo.situation.id : '';
+  const useAI = (typeof aiReady === 'function') && aiReady();
+  setStatus(useAI ? 'Проверяю… ✨' : 'Проверяю…');
+
+  try {
+    // 1. Проверка: нейросеть → при любой ошибке локальный движок
+    let ev;
+    if (useAI) {
+      try {
+        ev = await checkAnswerAI(text, lastAiText, convo.situation, db.profile.level);
+        setStatus('AI проверил ✨');
+      } catch (e) { ev = evaluateAnswer(text, lastAiText, sitId); }
+    } else {
+      await delay(600);
+      ev = evaluateAnswer(text, lastAiText, sitId);
     }
-  }, 600);
+
+    // 2. Непонятный ответ: предупреждаем и повторяем тот же вопрос
+    if (ev.unclear) {
+      showCorrection(text, ev);
+      resetBusy();
+      setTimeout(() => aiSay(lastAiText || 'Could you say that again, please?'), 900);
+      return;
+    }
+
+    convo.evals.push(ev);
+    saveTurnError(ev, text);
+    showCorrection(text, ev);
+
+    // 3. Реплика: нейросеть → при любой ошибке локальные шаблоны
+    let reply;
+    if (useAI) {
+      try { reply = await nextReplyAI(text, convo.turns, convo.situation, db.profile.level); }
+      catch (e) { reply = nextAiMessage(text, convo); }
+    } else {
+      reply = nextAiMessage(text, convo);
+    }
+    convo.step++;
+    setTimeout(() => { aiSay(reply); resetBusy(); }, 900);
+  } catch (e) {
+    resetBusy();
+    addBubble('ai', 'Something went wrong. Please try again. / Что-то пошло не так. Попробуйте ещё раз.');
+  }
 }
 
 function showCorrection(text, ev) {
   const mode = db.profile.mode; // gentle | normal | teacher
   let html = '';
 
-  if (ev.corrections.length) {
+  if (ev.unclear) {
+    // ⚠️ Непонятный ответ: просим повторить, без оценок
+    html += `<div class="fix-ok">⚠️ I couldn't understand your answer. Please try again.</div>`;
+  } else if (ev.corrections.length) {
     // ❌ Ошибки: компактные строки «фрагмент → исправление»
     // (соседние правки слиты в один фрагмент: cnt fiand a geta → can I find a gate)
     const frags = (ev.fragments && ev.fragments.length)
@@ -198,7 +261,7 @@ function showCorrection(text, ev) {
     `<div class="why">❌ ${escapeHtml(c.original)} → ✅ ${escapeHtml(c.correction)} — ${escapeHtml(c.explanation)}</div>`
   ).join('');
   const open = mode === 'teacher' ? ' open' : '';
-  if (ev.corrections.length || mode === 'teacher') {
+  if (ev.corrections.length || (mode === 'teacher' && !ev.unclear)) {
     html += `<details class="fix-details"${open}><summary>Подробнее</summary><div class="marks">${marks}</div>${details}</details>`;
   }
 

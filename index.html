@@ -41,6 +41,18 @@
             </select>
           </label>
         </div>
+        <div class="ai-card">
+          <label class="ai-row"><input type="checkbox" id="ai-enabled"> ✨ Нейросеть Gemini <small class="muted">— живой диалог и умная проверка</small></label>
+          <div id="ai-settings" class="hidden">
+            <input type="password" id="ai-key" class="ai-input" placeholder="API-ключ…" autocomplete="off">
+            <div class="ai-row2">
+              <select id="ai-model"></select>
+              <button class="btn ghost" id="ai-test">Проверить</button>
+            </div>
+            <p class="muted small" id="ai-status"></p>
+            <p class="muted small">Ключ хранится только в этом браузере. <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Получить бесплатно</a>. Без ключа работает встроенная проверка.</p>
+          </div>
+        </div>
         <p id="no-net" class="net-warn hidden">Нет интернета — можно только читать историю. Разговор нужен онлайн.</p>
       </div>
     </section>
@@ -116,6 +128,7 @@
 <script src="js/store.js"></script>
 <script src="js/conversation.js"></script>
 <script src="js/evaluator.js"></script>
+<script src="js/ai.js">
 <script src="js/voice.js"></script>
 <script src="js/app.js"></script>
 </body>

@@ -10,6 +10,7 @@ const DEFAULT_DB = {
   errors: [],          // {type, text, correction, count, date}
   memory: { facts: [] }, // долгосрочные факты: ["two daughters", "lives in Kyiv"]
   usedTopics: [],      // id тем, чтобы не повторяться
+  ai: { enabled: false, key: '', model: 'gemini-2.0-flash' }, // нейросеть Gemini
 };
 
 let db = loadDb();
