@@ -65,15 +65,44 @@ function evaluateAnswer(raw, question) {
   if (words.length > 4 && hit === 0 && qWords.length >= 3) context = 35;
   context = Math.max(0, Math.min(100, context));
 
-  // --- Better-версия: только первая реальная ошибка, минимально ---
+  // --- Better-версия: применяем все точечные исправления к копии фразы ---
   let better = null;
-  const g = errors.find(e => e.type === 'grammar' && e.correction);
-  if (g && !/^[A-Z]$/.test(g.correction)) {
-    better = text.replace(new RegExp(escapeRe(g.original), 'i'), g.correction);
+  if (errors.length) {
+    better = text;
+    errors.forEach(e => {
+      if (e.correction && !/^[A-Z]$/.test(e.correction) && e.original) {
+        better = better.replace(new RegExp(escapeRe(e.original), 'i'), e.correction);
+      }
+    });
     if (better === text) better = null;
   }
 
-  return { empty: false, grammar, vocabulary, naturalness, context, corrections: errors.slice(0, 3), better, vocab: [] };
+  // --- More natural: только если грамматика чистая, не как ошибка ---
+  let natural = null;
+  if (!errors.length) {
+    const n = naturalSuggestion(text);
+    if (n) natural = n;
+  }
+
+  return { empty: false, grammar, vocabulary, naturalness, context, corrections: errors.slice(0, 3), better, natural, vocab: [] };
+}
+
+const NATURAL_RULES = [
+  { re: /\bcan you give me\b/i, make: () => 'Could I have' },
+  { re: /\bi want a\b/i, make: () => "I'd like a" },
+];
+
+// Возвращает {original, suggestion, sentence} или null
+function naturalSuggestion(text) {
+  for (const r of NATURAL_RULES) {
+    const m = text.match(r.re);
+    if (m) {
+      const suggestion = r.make(m);
+      const sentence = text.replace(r.re, suggestion);
+      if (sentence !== text) return { original: m[0], suggestion, sentence };
+    }
+  }
+  return null;
 }
 
 function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }

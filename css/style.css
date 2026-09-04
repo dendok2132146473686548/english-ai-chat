@@ -49,6 +49,21 @@ body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--tex
 .correction .good{color:var(--good);font-weight:700}
 .correction .why{color:var(--muted);font-size:14px;margin-top:4px}
 .marks{font-size:15px;margin-top:6px}
+/* компактные исправления */
+.fix{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px;margin-top:2px;max-width:88%}
+.fix-title{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.fix-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:2px 0}
+.fix-row code{font-family:inherit;font-size:14px}
+.fix-row .bad{color:var(--bad)}
+.fix-row .good{color:var(--good);font-weight:700}
+.fix-row .arrow{color:var(--muted)}
+.fix-better{margin-top:6px}
+.fix-ok{font-weight:700}
+.fix-natural{margin-top:4px;color:var(--text)}
+.fix-details{margin-top:6px;font-size:13px}
+.fix-details summary{cursor:pointer;color:var(--muted);font-weight:600}
+.fix-details .marks{font-size:13px;color:var(--muted);margin:4px 0}
+.fix-details .why{color:var(--muted);font-size:13px;margin-top:2px}
 #input-area{position:sticky;bottom:0;background:var(--bg);padding:10px 0 6px}
 .mode-toggle{display:flex;background:#e5e9f0;border-radius:999px;padding:3px;margin-bottom:8px}
 .seg{flex:1;border:none;background:transparent;border-radius:999px;padding:10px;font-size:15px;font-weight:700;cursor:pointer}

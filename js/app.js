@@ -169,27 +169,37 @@ function handleUserText(text) {
 }
 
 function showCorrection(text, ev) {
-  const mode = db.profile.mode;
-  const showAll = mode === 'teacher';
-  const showImportant = mode !== 'gentle';
-  if (mode === 'gentle' && ev.grammar >= 70 && (ev.corrections.length === 0 || ev.context < 50)) {
-    // в мягком режиме почти не перебиваем
+  const mode = db.profile.mode; // gentle | normal | teacher
+  let html = '';
+
+  if (ev.corrections.length) {
+    // ❌ Ошибки: компактные строки «фрагмент → исправление»
+    const rows = ev.corrections.map(c =>
+      `<div class="fix-row"><span class="bad">❌ <code>${escapeHtml(c.original)}</code></span><span class="arrow">→</span><span class="good">✅ <code>${escapeHtml(c.correction)}</code></span></div>`
+    ).join('');
+    html += `<div class="fix-title">${ev.corrections[0].type === 'grammar' ? 'Grammar' : escapeHtml(ev.corrections[0].type)}</div>${rows}`;
+    if (ev.better) html += `<div class="fix-better"><b>Better:</b> “${escapeHtml(ev.better)}”</div>`;
+  } else if (ev.natural && mode !== 'gentle') {
+    // ⚠️ Грамматика чистая, но можно естественнее — не как ошибка
+    html += `<div class="fix-ok">✅ Correct</div>
+      <div class="fix-natural">⚠️ <b>More natural:</b> “${escapeHtml(ev.natural.sentence)}”</div>`;
+  } else {
+    // ✅ Всё хорошо
+    html += `<div class="fix-ok">✅ Correct</div>`;
   }
-  const marks = `Grammar: ${mark(ev.grammar)}  Vocabulary: ${mark(ev.vocabulary)}  Naturalness: ${mark(ev.naturalness)}`;
-  let html = `<div class="marks">${marks}</div>`;
-  if (ev.better && showImportant) {
-    html += `<div class="correction" style="margin-top:8px">You said: <span class="bad">"${escapeHtml(text)}"</span><br>Better: <span class="good">"${escapeHtml(ev.better)}"</span></div>`;
+
+  // Подробнее — скрыто по умолчанию (в режиме teacher раскрыто сразу)
+  const marks = `Grammar ${mark(ev.grammar)} · Vocabulary ${mark(ev.vocabulary)} · Naturalness ${mark(ev.naturalness)} · Context ${mark(ev.context)}`;
+  const details = ev.corrections.map(c =>
+    `<div class="why">❌ ${escapeHtml(c.original)} → ✅ ${escapeHtml(c.correction)} — ${escapeHtml(c.explanation)}</div>`
+  ).join('');
+  const open = mode === 'teacher' ? ' open' : '';
+  if (ev.corrections.length || mode === 'teacher') {
+    html += `<details class="fix-details"${open}><summary>Подробнее</summary><div class="marks">${marks}</div>${details}</details>`;
   }
-  if (showAll && ev.corrections.length) {
-    ev.corrections.forEach(c => {
-      html += `<div class="correction">❌ ${escapeHtml(c.original)} → ✅ ${escapeHtml(c.correction)}<div class="why">${escapeHtml(c.explanation)}</div></div>`;
-    });
-  } else if (showImportant && ev.corrections.length && ev.grammar < 70) {
-    const c = ev.corrections[0];
-    html += `<div class="correction">💡 ${escapeHtml(c.explanation)}</div>`;
-  }
+
   const d = document.createElement('div');
-  d.className = 'correction';
+  d.className = 'fix';
   d.innerHTML = html;
   const chat = document.getElementById('chat');
   chat.appendChild(d);

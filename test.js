@@ -34,6 +34,17 @@ ok(ev.vocabulary > 0 && ev.naturalness > 0 && ev.context > 0, 'all 4 categories 
 const ev2 = X.evaluateAnswer('Could I get a seat near the window?', 'Would you like a window seat?');
 ok(ev2.corrections.length === 0, 'correct answer, no invented errors', JSON.stringify(ev2.corrections));
 
+// 4b. Fragments + Better sentence
+const evB = X.evaluateAnswer('I have went to London and buy a new phone.', 'What did you do?');
+const rows = evB.corrections.map(c => c.original + '->' + c.correction).join('|');
+ok(/have went/i.test(rows), 'fragment have went flagged', rows);
+ok(evB.better && /went/.test(evB.better), 'better sentence built', evB.better);
+
+// 4c. More natural, not an error
+const evN = X.evaluateAnswer('Can you give me a room with a view?', 'What would you like?');
+ok(evN.corrections.length === 0 && !!evN.natural, 'natural suggestion, not error', JSON.stringify(evN.natural));
+ok(evN.natural && /Could I have/.test(evN.natural.sentence), 'natural sentence', evN.natural && evN.natural.sentence);
+
 // 5. ÐŸÐ°Ð¼ÑÑ‚ÑŒ: Ñ„Ð°ÐºÑ‚Ñ‹ Ð¸Ð·Ð²Ð»ÐµÐºÐ°ÑŽÑ‚ÑÑ
 const f = X.extractFacts('I live in Kyiv and I have two daughters');
 ok(f.length >= 2, 'facts extracted', f.join('|'));
