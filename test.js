@@ -73,6 +73,26 @@ ok(X.LEVELS.length === 5 && X.LEVELS[0].id === 'A1', 'levels A1-C1');
 const w = X.extractNewWords('I visited a wonderful museum in London yesterday');
 ok(w.includes('museum') || w.includes('wonderful') || w.includes('visited'), 'words extracted', w.join(','));
 
+// 10. Баг-кейс: опечатки не должны давать ✅ Correct
+const evT = X.evaluateAnswer('Hello where i cnt fiand a geta', 'Good morning. Your suitcase is damaged in Tokyo. How can I help you?', 'airport');
+ok(evT.corrections.length >= 3, 'typos flagged, no false Correct', JSON.stringify(evT.corrections.map(c => c.original + '->' + c.correction)));
+const tf = (evT.fragments || []).map(f => f.from + '->' + f.to).join('|');
+ok(/geta/.test(tf) && /gate/.test(tf), 'geta->gate fragment (context, not get)', tf);
+ok(/fiand/.test(tf) && /find/.test(tf), 'fiand->find fragment', tf);
+ok(evT.better && /where can I find a gate/.test(evT.better), 'better keeps word order', evT.better);
+
+// 11. Правильная фраза — Correct, без выдуманных ошибок
+const evC = X.evaluateAnswer('Hello, where can I find a gate?', 'Good morning. How can I help you?', 'airport');
+ok(evC.corrections.length === 0, 'correct stays Correct', JSON.stringify(evC.corrections));
+
+// 12. Естественный вариант — тоже Correct
+const evN2 = X.evaluateAnswer('Excuse me, where can I find my gate?', 'Good morning. How can I help you?', 'airport');
+ok(evN2.corrections.length === 0, 'natural variant is Correct', JSON.stringify(evN2.corrections));
+
+// 13. dont без апострофа чинится, lets как глагол не трогаем
+const evD = X.evaluateAnswer('I dont know where the gate is.', 'What is the problem?', 'airport');
+ok(evD.corrections.some(c => /dont/i.test(c.original) && /don't/.test(c.correction)), "dont->don't fixed", JSON.stringify(evD.corrections));
+
 console.log(fails === 0 ? 'ALL TESTS PASSED' : fails + ' FAILED');
 process.exit(fails ? 1 : 0);
 

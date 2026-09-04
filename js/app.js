@@ -147,7 +147,7 @@ function handleUserText(text) {
   setTimeout(() => {
     try {
       const lastAi = [...convo.turns].reverse().find(t => t.role === 'ai');
-      const ev = evaluateAnswer(text, lastAi ? lastAi.text : '');
+      const ev = evaluateAnswer(text, lastAi ? lastAi.text : '', convo.situation ? convo.situation.id : '');
       convo.evals.push(ev);
       saveTurnError(ev, text);
       showCorrection(text, ev);
@@ -174,11 +174,15 @@ function showCorrection(text, ev) {
 
   if (ev.corrections.length) {
     // ❌ Ошибки: компактные строки «фрагмент → исправление»
-    const rows = ev.corrections.map(c =>
-      `<div class="fix-row"><span class="bad">❌ <code>${escapeHtml(c.original)}</code></span><span class="arrow">→</span><span class="good">✅ <code>${escapeHtml(c.correction)}</code></span></div>`
+    // (соседние правки слиты в один фрагмент: cnt fiand a geta → can I find a gate)
+    const frags = (ev.fragments && ev.fragments.length)
+      ? ev.fragments
+      : ev.corrections.map(c => ({ from: c.original, to: c.correction }));
+    const rows = frags.map(f =>
+      `<div class="fix-row"><span class="bad">❌ <code>${escapeHtml(f.from)}</code></span><span class="arrow">→</span><span class="good">✅ <code>${escapeHtml(f.to)}</code></span></div>`
     ).join('');
     html += `<div class="fix-title">${ev.corrections[0].type === 'grammar' ? 'Grammar' : escapeHtml(ev.corrections[0].type)}</div>${rows}`;
-    if (ev.better) html += `<div class="fix-better"><b>Better:</b> “${escapeHtml(ev.better)}”</div>`;
+    if (ev.better) html += `<div class="fix-better"><b>Better:</b> <i>“${escapeHtml(ev.better)}”</i></div>`;
   } else if (ev.natural && mode !== 'gentle') {
     // ⚠️ Грамматика чистая, но можно естественнее — не как ошибка
     html += `<div class="fix-ok">✅ Correct</div>
