@@ -10,11 +10,56 @@ const GRAMMAR_RULES = [
   { re: /\bcan you explain me\b/i, fix: 'can you explain to me', why: 'Explain to me (не explain me).' },
   { re: /\bi booked room\b/i, fix: 'I booked a room', why: 'Перед исчисляемым существительным нужен артикль: a room.' },
   { re: /\byesterday i go\b/i, fix: 'yesterday I went', why: 'Yesterday → Past Simple: went.' },
-  { re: /\bhe (go|have|do)\b/i, fix: 'he goes / has / does', why: 'С he/she/it к глаголу добавляем -s.' },
   { re: /\bchilds\b/i, fix: 'children', why: 'Множественное число: child → children.' },
   { re: /\bmuch peoples\b/i, fix: 'many people', why: 'People — исчисляемое: many people.' },
   { re: /\bi am agree\b/i, fix: 'I agree', why: 'Agree не требует am: I agree.' },
+  { re: /\bmore better\b/i, fix: 'much better', why: 'Better — уже сравнительная форма.' },
+  // Согласование he/she/it + глагол
+  { re: /\b(he|she|it) (go|have|do|want|need|like|know|think|say|tell|come|make|take|give|live|work|speak)\b/i,
+    fix: m => `${m[1]} ${THIRD_VERB[m[2].toLowerCase()]}`,
+    why: 'С he/she/it к глаголу добавляем -s (have → has).' },
+  // I/you/we/they + глагол с -s
+  { re: /\b(i|you|we|they) (goes|has|does|wants|needs|likes|knows)\b/i,
+    fix: m => `${m[1]} ${BASE_VERB[m[2].toLowerCase()]}`,
+    why: 'С I/you/we/they глагол без -s.' },
+  // they/we/you + is/was
+  { re: /\b(they|we|you) (is|was)\b/i,
+    fix: m => `${m[1]} ${m[2].toLowerCase() === 'is' ? 'are' : 'were'}`,
+    why: 'С they/we/you используем are/were.' },
+  { re: /\bi (is|are)\b/i, fix: 'I am', why: 'С I используем am.' },
+  { re: /\b(he|she|it) (don\'t|do not)\b/i, fix: m => `${m[1]} doesn't`, why: "С he/she/it используем doesn't." },
+  { re: /\bi no (like|know|have|want|understand|speak|remember)\b/i,
+    fix: m => `I don't ${m[1].toLowerCase()}`,
+    why: "Отрицание: I don't + глагол." },
+  { re: /\bi am (go|eat|see|read|work|sleep|run|do|watch|cook)\b/i,
+    fix: m => `I am ${ING_VERB[m[1].toLowerCase()]}`,
+    why: 'Сейчас происходит → I am + глагол-ing.' },
+  { re: /\bi very (tired|happy|sad|hungry|busy|ready|late|angry|cold|hot|fine)\b/i,
+    fix: m => `I am very ${m[1].toLowerCase()}`,
+    why: 'Нужен глагол-связка: I am very tired.' },
+  { re: /\bhow much (it|this|that) cost\b/i,
+    fix: m => `how much does ${m[1].toLowerCase()} cost`,
+    why: 'Вопрос: How much does it cost?' },
+  { re: /\bwhat means (\w+)\b/i,
+    fix: m => `what does ${m[1]} mean`,
+    why: 'Вопрос: What does this word mean?' },
+  { re: /\bdid(?:n't| not)?(?:\s+\w+){0,2}\s+(went|saw|took|made|came|got|bought|found|knew|thought|said|told)\b/i,
+    fix: m => {
+      const base = DID_BASE[m[1].toLowerCase()];
+      const prefix = m[0].slice(0, m[0].indexOf(m[1].toLowerCase()));
+      return prefix + base;
+    },
+    why: 'После did глагол в начальной форме: did you go.' },
+  { re: /\bwhere is (toilet|station|airport|hotel|gate|exit|bank|bus)\b/i,
+    fix: m => `where is the ${m[1].toLowerCase()}`,
+    why: 'Нужен артикль: where is the gate.' },
 ];
+
+// Формы для правил согласования
+const THIRD_VERB = { go: 'goes', have: 'has', do: 'does', want: 'wants', need: 'needs', like: 'likes', know: 'knows', think: 'thinks', say: 'says', tell: 'tells', come: 'comes', make: 'makes', take: 'takes', give: 'gives', live: 'lives', work: 'works', speak: 'speaks' };
+const BASE_VERB = { goes: 'go', has: 'have', does: 'do', wants: 'want', needs: 'need', likes: 'like', knows: 'know' };
+const ING_VERB = { go: 'going', eat: 'eating', see: 'seeing', read: 'reading', work: 'working', sleep: 'sleeping', run: 'running', do: 'doing', watch: 'watching', cook: 'cooking' };
+const DID_BASE = { went: 'go', saw: 'see', took: 'take', made: 'make', came: 'come', got: 'get', bought: 'buy', found: 'find', knew: 'know', thought: 'think', said: 'say', told: 'tell' };
 
 // ---------- Словарь, опечатки, фрагменты ----------
 // Порядок = частотность: важен для разрешения неоднозначностей (cnt->can, а не cat).
@@ -50,7 +95,7 @@ const NO_APO_FIX = {
   whys: "why's", hows: "how's", youre: "you're"
 };
 // Дополнительные обычные слова, чтобы не помечать их как опечатки
-['quite','quiet','enough','almost','already','often','really','rather','pretty','across','along','behind','below','beside','inside','outside','without','within','two','three','four','five','six','seven','eight','nine','ten','first','second','email','internet','website','message','messages','photo','photos','video','cinema','vegetables','fruit','fruits','juice','salad','soup','sandwich','jacket','dress','skirt','jeans','socks','gloves','scarf','boots','ticket','tickets','map','guide','women','gym','app','bus','gym','yoga','smartphone','laptop','key','keys','wallet','passport','near','far','ago','yet','still','else','together','around','such','ever','upon','elsewhere','anywhere','somewhere','nowhere','everywhere','anybody','somebody','nobody','everybody','anyone','someone','noone','everything','something','nothing','anything','little','whole','whose','whom','shall','ought','dare','forward','toward','towards','among','until','unless','while','though','although','because','since','despite','except','onto','past','plus','minus','over','under','nearby','abroad','ahead','asleep','awake','alive'].forEach(w => KNOWN.add(w));
+['quite','quiet','enough','almost','already','often','really','rather','pretty','across','along','behind','below','beside','inside','outside','without','within','two','three','four','five','six','seven','eight','nine','ten','first','second','email','internet','website','message','messages','photo','photos','video','cinema','vegetables','fruit','fruits','juice','salad','soup','sandwich','jacket','dress','skirt','jeans','socks','gloves','scarf','boots','ticket','tickets','map','guide','women','gym','app','bus','gym','yoga','smartphone','laptop','key','keys','wallet','passport','near','far','ago','yet','still','else','together','around','such','ever','upon','elsewhere','anywhere','somewhere','nowhere','everywhere','anybody','somebody','nobody','everybody','anyone','someone','noone','everything','something','nothing','anything','little','whole','whose','whom','shall','ought','dare','forward','toward','towards','among','until','unless','while','though','although','because','since','despite','except','onto','past','plus','minus','over','under','nearby','abroad','ahead','asleep','awake','alive','word','words','sentence','sentences','phrase','phrases','language','languages','meaning','meanings','definition','definitions','vocabulary','grammar','pronunciation','accent','dialect','translate','translation','memory','memories','dream','dreams','plan','plans','goal','goals','hobby','hobbies','interest','interests','sport','sports','music','songs','movie','movies','book','books','story','stories','history','art','painting','paintings','science','math','physics','chemistry','biology','geography','education','knowledge','skill','skills','experience','practice','progress','level','levels','beginner','intermediate','advanced','student','students','class','classes','test','tests','score','scores','grade','grades'].forEach(w => KNOWN.add(w));
 
 const TOPIC_WORDS = {
   airport: ['gate','flight','flights','boarding','luggage','suitcase','baggage','delay','delayed','cancelled','seat','seats','window','aisle','passport','security','checkin','airline','terminal'],
@@ -108,6 +153,9 @@ function findTypo(w, isFirst, ctx) {
   if (/[A-Z]/.test(w.slice(1))) return null;
   if (!isFirst && /^[A-Z]/.test(w)) return null; // имена собственные
   if (low.endsWith("'s") && KNOWN.has(low.slice(0, -2))) return null; // притяжательный падеж
+  // Множественное число: friends → friend, daughters → daughter, watches → watch
+  if (low.endsWith('es') && KNOWN.has(low.slice(0, -2))) return null;
+  if (low.endsWith('s') && !low.endsWith('ss') && KNOWN.has(low.slice(0, -1))) return null;
   // Фаза 1: только контекстные слова (тема + вопрос) — они точнее всего
   // передают намерение пользователя (geta -> gate, а не get).
   let best = null, bestD = 99, bestF = 1e9;

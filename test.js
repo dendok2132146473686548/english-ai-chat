@@ -93,6 +93,57 @@ ok(evN2.corrections.length === 0, 'natural variant is Correct', JSON.stringify(e
 const evD = X.evaluateAnswer('I dont know where the gate is.', 'What is the problem?', 'airport');
 ok(evD.corrections.some(c => /dont/i.test(c.original) && /don't/.test(c.correction)), "dont->don't fixed", JSON.stringify(evD.corrections));
 
+// 14. Батарея: очевидно неправильные ответы НЕ должны быть Correct
+const wrongList = [
+  'I have went to London last year.',
+  'Hello where i cnt fiand a geta',
+  'He go to school every day.',
+  'He have a car.',
+  'She don\'t like it.',
+  'They is my friends.',
+  'I is fine.',
+  'I very tired.',
+  'I no like coffee.',
+  'How much it cost?',
+  'Did you went to London?',
+  'I want change my flight.',
+  'Yesterday I go to the airport.',
+  'Where is toilet?',
+  'I am agree with you.',
+  'That is more better.',
+];
+wrongList.forEach(s => {
+  const r = X.evaluateAnswer(s, 'Tell me about your day.', 'airport');
+  ok(r.corrections.length > 0, 'not-Correct: ' + s, JSON.stringify(r.corrections.map(c => c.original)));
+});
+
+// 15. Батарея: правильные ответы остаются Correct
+const rightList = [
+  'Hello, where can I find a gate?',
+  'Could I have a window seat?',
+  'I went to London last year.',
+  'She has two daughters.',
+  'They are my friends.',
+  'I am very tired.',
+  'How much does it cost?',
+  "I don't like coffee.",
+  'He goes to school every day.',
+  'If I were you, I would take a taxi.',
+  'What does this word mean?',
+];
+rightList.forEach(s => {
+  const r = X.evaluateAnswer(s, 'Tell me about your trip.', 'airport');
+  ok(r.corrections.length === 0, 'Correct: ' + s, JSON.stringify(r.corrections.map(c => c.original + '->' + c.correction)));
+});
+
+// 16. Better-предложения для новых правил
+const rB = X.evaluateAnswer('Did you went to London?', 'Tell me about your trip.', 'airport');
+ok(rB.better && /did you go/i.test(rB.better), 'did+base better', rB.better);
+const rC = X.evaluateAnswer('How much it cost?', 'Shopping questions.', 'airport');
+ok(rC.better && /how much does it cost/i.test(rC.better), 'how-much better', rC.better);
+const rD = X.evaluateAnswer('He go to school every day.', 'Tell me about him.', 'airport');
+ok(rD.better && /He goes to school/.test(rD.better), 'third-person better keeps case', rD.better);
+
 console.log(fails === 0 ? 'ALL TESTS PASSED' : fails + ' FAILED');
 process.exit(fails ? 1 : 0);
 
