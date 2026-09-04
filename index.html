@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#4f7cff">
+<title>English Friend — разговорный тренажёр</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <main id="views">
+    <!-- HOME -->
+    <section class="view active" data-view="home">
+      <div class="home-wrap">
+        <div class="avatar">💬</div>
+        <h1>English Friend</h1>
+        <p class="subtitle">Разговаривайте по-английски с другом.<br>Он придумает ситуацию и поможет с ошибками.</p>
+
+        <button class="btn primary big" id="btn-start">Начать разговор</button>
+
+        <div class="home-row">
+          <div class="mini-card"><small>Уровень</small><b id="home-level">A1</b></div>
+          <div class="mini-card"><small>Разговоров</small><b id="home-count">0</b></div>
+        </div>
+        <div class="progress-line"><i id="home-progress"></i></div>
+        <p class="muted small" id="home-avg"></p>
+
+        <button class="btn ghost wide" id="btn-continue">Продолжить прошлый разговор →</button>
+
+        <div class="settings-row">
+          <label>Уровень
+            <select id="sel-level"></select>
+          </label>
+          <label>Подсказки
+            <select id="sel-mode">
+              <option value="gentle">Мягкие</option>
+              <option value="normal" selected>Обычные</option>
+              <option value="teacher">Учитель</option>
+            </select>
+          </label>
+        </div>
+        <p id="no-net" class="net-warn hidden">Нет интернета — можно только читать историю. Разговор нужен онлайн.</p>
+      </div>
+    </section>
+
+    <!-- CHAT -->
+    <section class="view" data-view="chat">
+      <header class="chat-head">
+        <button class="icon-btn" id="btn-back">‹</button>
+        <div><b id="chat-topic">Разговор</b><small id="chat-status">AI печатает…</small></div>
+        <button class="btn small danger" id="btn-finish">Закончить</button>
+      </header>
+      <div id="chat"></div>
+      <div id="input-area">
+        <div class="mode-toggle">
+          <button id="btn-mode-text" class="seg active">⌨️ Текст</button>
+          <button id="btn-mode-voice" class="seg">🎤 Голос</button>
+        </div>
+        <div class="input-row" id="text-row">
+          <textarea id="answer-input" rows="2" placeholder="Напишите ответ по-английски…"></textarea>
+          <button id="btn-send" class="btn primary">➤</button>
+        </div>
+        <div class="input-row hidden" id="voice-row">
+          <button id="btn-talk" class="btn primary big">🎤 Говорите…</button>
+        </div>
+        <p id="voice-text" class="muted"></p>
+      </div>
+    </section>
+
+    <!-- REPORT -->
+    <section class="view" data-view="report">
+      <div class="report-wrap">
+        <h2>Результаты разговора</h2>
+        <div class="score-grid" id="report-scores"></div>
+        <h3>Что получилось хорошо</h3>
+        <ul id="report-good" class="nice-list"></ul>
+        <h3>Что улучшить</h3>
+        <ul id="report-bad" class="nice-list"></ul>
+        <h3>Новые слова</h3>
+        <div id="report-words" class="words"></div>
+        <h3>Что дальше</h3>
+        <p id="report-next" class="muted"></p>
+        <button class="btn primary big" id="btn-again">Новый разговор</button>
+        <button class="btn ghost wide" id="btn-to-progress" style="margin-top:10px">Мой прогресс</button>
+      </div>
+    </section>
+
+    <!-- PROGRESS -->
+    <section class="view" data-view="progress">
+      <h2 class="page-title">Мой прогресс</h2>
+      <div class="stats-grid">
+        <div class="stat"><small>Разговоров</small><b id="p-count">0</b></div>
+        <div class="stat"><small>Минут</small><b id="p-min">0</b></div>
+        <div class="stat"><small>Средний балл</small><b id="p-avg">—</b></div>
+        <div class="stat"><small>Слов выучено</small><b id="p-words">0</b></div>
+      </div>
+      <h3>Оценки</h3>
+      <div id="p-bars"></div>
+      <h3>Последние разговоры</h3>
+      <div id="p-chart" class="chart"></div>
+      <h3>Частые ошибки</h3>
+      <div id="p-errors"></div>
+      <button class="btn ghost wide" id="btn-back-home" style="margin-top:14px">На главную</button>
+    </section>
+  </main>
+
+  <nav id="bottom-nav">
+    <button data-nav="home" class="nav-btn active">🏠 Главная</button>
+    <button data-nav="progress" class="nav-btn">📊 Прогресс</button>
+  </nav>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/store.js"></script>
+<script src="js/conversation.js"></script>
+<script src="js/evaluator.js"></script>
+<script src="js/voice.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
